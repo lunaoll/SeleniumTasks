@@ -3,6 +3,8 @@ package oscarsTasks;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.Select;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 import utilities.ConfigurationReader;
 import utilities.Driver;
@@ -15,9 +17,28 @@ public class Task1 {
     public void test1(){
 
         Driver.getDriver().get("https://www.amazon.com");
-       WebElement searchBox= Driver.getDriver().findElement(By.xpath("//input[@id='twotabsearchtextbox']"));
+       WebElement searchBox= Driver.getDriver().findElement(By.xpath("(//div[@class='nav-fill'])[2]//input"));
+
       searchBox.sendKeys(ConfigurationReader.getProperty("searchValue")+Keys.ENTER);
 
+      WebElement firsthat=Driver.getDriver().findElement(By.xpath("//div[@data-cel-widget='search_result_0']/following-sibling::div[1]"));
+
+
+      firsthat.click();
+   // String onePrice=  Driver.getDriver().findElement(By.xpath("(//span[@aria-hidden='true'])[14]")).getText();
+
+       Driver.getDriver().findElement(By.xpath("//span[@class='a-button-text a-declarative']")).click();
+       Driver.getDriver().findElement(By.xpath("//a[@data-value='{\"stringVal\":\"2\"}']")).click();
+       Driver.getDriver().findElement(By.xpath("//input[@id='add-to-cart-button']")).click();
+       Driver.getDriver().findElement(By.linkText("Go to Cart")).click();
+
+       String actuallresult=   Driver.getDriver().findElement(By.xpath("//span[@class='a-dropdown-prompt']")).getText();
+        Assert.assertTrue(actuallresult.equals("2"));
+
+        String actualPrice=Driver.getDriver().findElement(By.xpath("//span[@class='a-offscreen']")).getText();
+
+        Assert.assertEquals(68.00,actualPrice);
+        // Assert.assertTrue(actuallresult.equals("$68.00"));
 
 
 
