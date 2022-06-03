@@ -1,50 +1,133 @@
 package oscarsTasks;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.Keys;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.Select;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import utilities.ConfigurationReader;
 import utilities.Driver;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 public class Task1 {
+    WebDriver driver;
 
+    @BeforeMethod
+    public void setupMethod() {
 
-    @Test
-
-    public void test1(){
-
-        Driver.getDriver().get("https://www.amazon.com");
-       WebElement searchBox= Driver.getDriver().findElement(By.xpath("(//div[@class='nav-fill'])[2]//input"));
-
-      searchBox.sendKeys(ConfigurationReader.getProperty("searchValue")+Keys.ENTER);
-
-      WebElement firsthat=Driver.getDriver().findElement(By.xpath("//div[@data-cel-widget='search_result_0']/following-sibling::div[1]"));
-
-
-      firsthat.click();
-   // String onePrice=  Driver.getDriver().findElement(By.xpath("(//span[@aria-hidden='true'])[14]")).getText();
-
-       Driver.getDriver().findElement(By.xpath("//span[@class='a-button-text a-declarative']")).click();
-       Driver.getDriver().findElement(By.xpath("//a[@data-value='{\"stringVal\":\"2\"}']")).click();
-       Driver.getDriver().findElement(By.xpath("//input[@id='add-to-cart-button']")).click();
-       Driver.getDriver().findElement(By.linkText("Go to Cart")).click();
-
-       String actuallresult=   Driver.getDriver().findElement(By.xpath("//span[@class='a-dropdown-prompt']")).getText();
-        Assert.assertTrue(actuallresult.equals("2"));
-
-        String actualPrice=Driver.getDriver().findElement(By.xpath("//span[@class='a-offscreen']")).getText();
-
-        Assert.assertEquals(68.00,actualPrice);
-        // Assert.assertTrue(actuallresult.equals("$68.00"));
-
-
-
+        driver = Driver.getDriver();
+        driver.manage().window().maximize();
+        driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+        driver.get("https://www.amazon.com");
     }
 
+    @Test
+    public void test1() {
 
+        WebElement searchBox = driver.findElement(By.id("twotabsearchtextbox"));
+
+        searchBox.sendKeys(ConfigurationReader.getProperty("searchValue") + Keys.ENTER);
+
+        //get the list of all hats
+        List<WebElement> hats = driver.findElements(By.cssSelector(".s-main-slot.s-result-list.s-search-results.sg-row>div[data-component-type='s-search-result']"));
+
+        //click on first hat
+        hats.get(0).click();
+
+        String actualUnitPrice = driver.findElement(By.xpath("//span[@class='a-offscreen']/parent::span[@class]/parent::td[@class='a-span12']")).getText();
+        //System.out.println("actualUnitPrice = " + actualUnitPrice);
+
+        //choose product quantity (2)
+        Select quantityBtn = new Select(driver.findElement(By.id("quantity")));
+        quantityBtn.selectByValue("2");
+
+        //add to cart
+        driver.findElement(By.id("add-to-cart-button")).click();
+
+        //open Cart
+        driver.findElement(By.linkText("Go to Cart")).click();
+
+        //convert string unitPrice to double
+        double unitPrice = Double.parseDouble(actualUnitPrice.substring(1));
+        System.out.println("unitPrice = " + unitPrice);
+
+        String actualTotalPrice = driver.findElement(By.xpath("(//div[@data-name='Subtotals'])[2]")).getText(); //Subtotal (2 items): $39.98
+        System.out.println("actualTotalPrice = " + actualTotalPrice);
+
+
+        String newStr = splitAndExtractPrice(actualTotalPrice);
+
+        //convert newStr(total price) into double
+        double totalPrice = Double.parseDouble(newStr);
+
+        System.out.println("actualTotalPrice = " + totalPrice);
+
+        Assert.assertEquals(totalPrice, unitPrice*2);
+
+        String actualQuantity = driver.findElement(By.xpath("//span[@class='a-dropdown-prompt']")).getText();
+        Assert.assertEquals(actualQuantity, "2");
+
+        driver.navigate().refresh();
+
+        //fix exception with try−catch block
+        try{
+            quantityBtn.selectByValue("1");
+        }
+        catch(StaleElementReferenceException e){
+            quantityBtn = new Select(Driver.getDriver().findElement(By.id("quantity")));
+            quantityBtn.selectByValue("1");
+        }
+
+        System.out.println("======================AFTER DECREASING THE QUANTITY======================");
+        driver.navigate().refresh();
+
+        String actualTotalPriceAfterDecrease = driver.findElement(By.xpath("(//div[@data-name='Subtotals'])[2]")).getText();
+        System.out.println("actualTotalPrice = " + actualTotalPriceAfterDecrease);
+
+
+        newStr = splitAndExtractPrice(actualTotalPriceAfterDecrease);
+
+        totalPrice = Double.parseDouble(newStr);
+
+        System.out.println("actualTotalPrice = " + totalPrice);
+
+        Assert.assertEquals(totalPrice, unitPrice);
+
+        actualQuantity = driver.findElement(By.xpath("//span[@class='a-dropdown-prompt']")).getText();
+        Assert.assertEquals(actualQuantity, "1");
+    }
+
+    public String splitAndExtractPrice(String str) {
+
+        //split actualTotalPrice according to : to extract price as string
+        String[] splitted = str.split(":");
+
+        //remove redundant spaces
+        splitted[1] = splitted[1].trim();
+        System.out.println("splitted[1] = " + splitted[1]);
+
+        String newStr = "";
+
+        //get the price char by char without $ sign and store it in newStr
+        for (int i=0 ; i<splitted[1].length() ; i++) {
+            if (splitted[1].charAt(i)>='0' && splitted[1].charAt(i)<='9' || splitted[1].charAt(i)=='\n' || splitted[1].charAt(i)=='.') {
+                if (splitted[1].charAt(i)=='\n')
+                    newStr += '.';
+                else
+                    newStr += splitted[1].charAt(i);
+            }
+        }
+        System.out.println("newStr = " + newStr);
+        return newStr;
+    }
+
+    @AfterMethod
+    public void tearDown(){
+        driver.quit();
+    }
 }
 
  /*   For the Tasks bellow create a new Maven Project, use the latest topics you have learned, like Page Object Modeling, singleton Driver class.
